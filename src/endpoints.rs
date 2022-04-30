@@ -25,6 +25,7 @@ impl From<RegisterRequest> for User {
     }
 }
 
+// #TODO: Rework this error handling
 #[derive(Debug, Error)]
 pub enum EndpointError {
     #[error(transparent)]
@@ -69,7 +70,6 @@ pub struct SessionResponse {
     session_uuid: uuid::Uuid,
 }
 
-// #TODO: Replace with propper error handling
 pub async fn register_user(
     Json(request): Json<RegisterRequest>,
     Extension(mongo_users_collection): Extension<Collection<User>>,
