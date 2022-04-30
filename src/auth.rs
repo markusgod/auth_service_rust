@@ -7,12 +7,6 @@ use thiserror::Error;
 pub enum AuthError {
     #[error("Session authentication is invalid or missing")]
     SessionIsInvalid,
-    #[error("Failed to authenticate user")]
-    AuthenticationError,
-    #[error("Failed to register user")]
-    RegistrationError,
-    #[error("Internal server error")]
-    InternalError,
     #[error("Cryptography error")]
     CryptoError {
         #[from]
@@ -22,9 +16,8 @@ pub enum AuthError {
 
 impl IntoResponse for AuthError {
     fn into_response(self) -> axum::response::Response {
-        match self {
-            AuthError::CryptoError { ref source } => tracing::warn!("{}", source),
-            _ => (),
+        if let AuthError::CryptoError { ref source } = self {
+            tracing::warn!("{}", source)
         }
         (StatusCode::UNAUTHORIZED, self.to_string()).into_response()
     }
