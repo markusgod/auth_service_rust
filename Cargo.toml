@@ -25,7 +25,7 @@ mongodb = { version = "2.2", features = [
     "bson-chrono-0_4",
 ] }
 validator = { version = "0.14" }
-uuid = { version = "1.0", features = ["serde", "v4"] }
+uuid = { version = "0.8", features = ["serde", "v4"] }
 
 # Future functionality
 # lettre = { version = "0.10.0-rc.6", features = ["tracing"] }

@@ -36,30 +36,33 @@ pub enum EndpointError {
     InvalidEmail(String),
     #[error(transparent)]
     UnknownError(#[from] anyhow::Error),
+    #[error("Unauthorized")]
+    Unauthorized,
 }
 
 impl IntoResponse for EndpointError {
     fn into_response(self) -> axum::response::Response {
         let res = match self {
-            EndpointError::MongoError(err) => {
-                tracing::error!("{}", err);
+            EndpointError::MongoError(_) => {
+                tracing::error!("{}", self);
                 (StatusCode::INTERNAL_SERVER_ERROR, "DB Error".to_string())
             }
-            EndpointError::UnknownError(err) => {
-                tracing::error!("{}", err);
+            EndpointError::UnknownError(_) => {
+                tracing::error!("{}", self);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Internal Error".to_string(),
                 )
             }
-            EndpointError::EmailAlreadyTaken(err) => {
-                tracing::trace!("{}", err);
-                (StatusCode::CONFLICT, err)
+            EndpointError::EmailAlreadyTaken(_) => {
+                tracing::trace!("{}", self);
+                (StatusCode::CONFLICT, self.to_string())
             }
-            EndpointError::InvalidEmail(err) => {
-                tracing::trace!("{}", err);
-                (StatusCode::PRECONDITION_FAILED, err)
+            EndpointError::InvalidEmail(_) => {
+                tracing::trace!("{}", self);
+                (StatusCode::PRECONDITION_FAILED, self.to_string())
             }
+            EndpointError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
         };
         res.into_response()
     }
@@ -97,4 +100,30 @@ pub async fn register_user(
     Ok(Json(SessionResponse {
         session_uuid: session.session_uuid,
     }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AccsessTokenRequest {
+    session_uuid: uuid::Uuid,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AccsessTokenResponse {
+    accsess_token: String,
+}
+
+pub async fn get_accsess_token(
+    Json(request): Json<AccsessTokenRequest>,
+    Extension(mongo_users_collection): Extension<Collection<User>>,
+) -> std::result::Result<Json<AccsessTokenResponse>, EndpointError> {
+    match mongo_users_collection
+        .find_one(doc! { "sessions": request.session_uuid}, None)
+        .await?
+    {
+        Some(user) => {
+            let accsess_token = crate::auth::generate_acsess_token(&user)?;
+            Ok(Json(AccsessTokenResponse { accsess_token }))
+        }
+        None => Err(EndpointError::Unauthorized),
+    }
 }

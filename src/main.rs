@@ -19,8 +19,8 @@ async fn main() -> anyhow::Result<()> {
     let mongo_users_collection = mongo_db.collection::<models::User>("Users");
 
     let app = axum::Router::new()
-        .route("/get_accsess_token", post(auth::generate_acsess_token))
         .route("/api/register", post(endpoints::register_user))
+        .route("/api/get_accsess_token", post(endpoints::get_accsess_token))
         .layer(Extension(mongo_users_collection));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
