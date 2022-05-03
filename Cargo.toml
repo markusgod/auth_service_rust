@@ -17,6 +17,7 @@ anyhow = "1"
 config = "0.13"
 
 # Project specific
+rand = "0.8"
 jsonwebtoken = "8"
 chrono = { version = "0.4", features = ["serde"] }
 mongodb = { version = "2.2", features = [

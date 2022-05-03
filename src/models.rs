@@ -19,6 +19,6 @@ impl User {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Session {
     pub session_name: String,
-    pub session_uuid: Uuid,
+    pub opaque_token: String,
     pub last_used: chrono::DateTime<Utc>,
 }

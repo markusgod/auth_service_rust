@@ -1,6 +1,7 @@
 use axum::{http::StatusCode, response::IntoResponse, Extension, Json};
 use mongodb::bson::doc;
 use mongodb::Collection;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -70,7 +71,7 @@ impl IntoResponse for EndpointError {
 
 #[derive(Debug, Serialize)]
 pub struct SessionResponse {
-    session_uuid: uuid::Uuid,
+    session_uuid: String,
 }
 
 pub async fn register_user(
@@ -88,9 +89,18 @@ pub async fn register_user(
         return Err(EndpointError::EmailAlreadyTaken(user.email));
     }
 
+    use rand::distributions::Alphanumeric;
+    let session_token: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(64)
+        .map(char::from)
+        .collect();
+
+    // #TODO: Add check session token is not already in use.
+
     user.sessions.push(crate::models::Session {
         session_name: "Registration session".to_owned(),
-        session_uuid: uuid::Uuid::new_v4(),
+        opaque_token: session_token,
         last_used: chrono::Utc::now(),
     });
 
@@ -98,7 +108,7 @@ pub async fn register_user(
     tracing::trace!("{:?}", insert_result);
     let session = user.sessions.first().expect("We just created session.");
     Ok(Json(SessionResponse {
-        session_uuid: session.session_uuid,
+        session_uuid: session.opaque_token.clone(),
     }))
 }
 
@@ -116,14 +126,13 @@ pub async fn get_accsess_token(
     Json(request): Json<AccsessTokenRequest>,
     Extension(mongo_users_collection): Extension<Collection<User>>,
 ) -> std::result::Result<Json<AccsessTokenResponse>, EndpointError> {
-    match mongo_users_collection
-        .find_one(doc! { "sessions": request.session_uuid}, None)
+    if let Some(user) = mongo_users_collection
+        .find_one(doc! { "sessions.session_uuid": request.session_uuid}, None)
         .await?
     {
-        Some(user) => {
-            let accsess_token = crate::auth::generate_acsess_token(&user)?;
-            Ok(Json(AccsessTokenResponse { accsess_token }))
-        }
-        None => Err(EndpointError::Unauthorized),
+        let accsess_token = crate::auth::generate_acsess_token(&user)?;
+        Ok(Json(AccsessTokenResponse { accsess_token }))
+    } else {
+        Err(EndpointError::Unauthorized)
     }
 }

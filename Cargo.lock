@@ -58,6 +58,7 @@ dependencies = [
  "config",
  "jsonwebtoken",
  "mongodb",
+ "rand",
  "serde",
  "thiserror",
  "tokio",
