@@ -1,0 +1,8 @@
+pipeline:
+  build:
+    image: ubuntu
+    commands:
+      - curl https://cli-assets.heroku.com/install-ubuntu.sh | sh
+      - (echo "$HEROKU_LOGIN" echo "$HEROKU_PASS") | heroku login
+      - git push https://git.heroku.com/test-rust-app-hmvn784.git
+    secrets: [HEROKU_LOGIN, HEROKU_PASS]
