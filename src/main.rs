@@ -19,6 +19,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = axum::Router::new()
         .route("/api/register", post(endpoints::register_user))
+        .route("/api/login", post(endpoints::login))
         .route("/api/get_accsess_token", post(endpoints::get_accsess_token))
         .layer(Extension(mongo_users_collection));
 

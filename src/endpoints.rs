@@ -1,4 +1,7 @@
-use axum::{http::StatusCode, response::IntoResponse, Extension, Json};
+use axum::{
+    extract::TypedHeader, headers::UserAgent, http::StatusCode, response::IntoResponse, Extension,
+    Json,
+};
 use mongodb::bson::doc;
 use mongodb::Collection;
 use rand::Rng;
@@ -16,11 +19,16 @@ pub struct RegisterRequest {
 
 impl From<RegisterRequest> for User {
     fn from(request: RegisterRequest) -> Self {
+        use argon2::password_hash::PasswordHasher;
+        let argon2 = argon2::Argon2::default();
+        let password = argon2
+            .hash_password(request.password.as_bytes(), "testSalt")
+            .unwrap();
         Self {
             uuid: uuid::Uuid::new_v4(),
             full_name: request.full_name,
             email: request.email,
-            password: request.password,
+            password: password.to_string(),
             sessions: vec![],
         }
     }
@@ -110,6 +118,59 @@ pub async fn register_user(
     Ok(Json(SessionResponse {
         session_uuid: session.opaque_token.clone(),
     }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LoginRequest {
+    pub email: String,
+    pub password: String,
+}
+
+pub async fn login(
+    TypedHeader(user_agent): TypedHeader<UserAgent>,
+    Json(request): Json<LoginRequest>,
+    Extension(mongo_users_collection): Extension<Collection<User>>,
+) -> std::result::Result<Json<SessionResponse>, EndpointError> {
+    if let Some(user) = mongo_users_collection
+        .find_one(doc! { "email":  &request.email}, None)
+        .await?
+    {
+        use argon2::PasswordVerifier;
+        let password_hash =
+            argon2::password_hash::PasswordHash::new(&user.password).map_err(anyhow::Error::msg)?;
+        if argon2::Argon2::default()
+            .verify_password(request.password.as_bytes(), &password_hash)
+            .is_err()
+        {
+            return Err(EndpointError::Unauthorized);
+        }
+        use rand::distributions::Alphanumeric;
+        let session_token: String = rand::thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(64)
+            .map(char::from)
+            .collect();
+        // #TODO: Add check session token is not already in use.
+
+        let new_session = crate::models::Session {
+            session_name: user_agent.to_string(),
+            opaque_token: session_token,
+            last_used: chrono::Utc::now(),
+        };
+
+        let update_result = mongo_users_collection
+            .update_one(
+                doc! { "email":  &request.email},
+                doc! {"$push": doc! {"sessions" : mongodb::bson::to_bson(&new_session).unwrap()}},
+                None,
+            )
+            .await?;
+        tracing::trace!("{:?}", update_result);
+        return Ok(Json(SessionResponse {
+            session_uuid: new_session.opaque_token.clone(),
+        }));
+    }
+    Err(EndpointError::Unauthorized)
 }
 
 #[derive(Debug, Deserialize)]
