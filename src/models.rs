@@ -17,9 +17,11 @@ impl User {
     }
 }
 
+#[serde_with::serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Session {
     pub session_name: String,
     pub opaque_token: String,
+    #[serde_as(as = "mongodb::bson::DateTime")]
     pub last_used: chrono::DateTime<Utc>,
 }

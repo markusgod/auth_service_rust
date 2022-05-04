@@ -135,7 +135,7 @@ pub async fn get_accsess_token(
             .update_one(
                 doc! {"sessions.opaque_token": &request.session_uuid},
                 doc! {"$set" : doc! {
-                    "sessions.$.last_used": chrono::Utc::now()
+                    "sessions.$.last_used": mongodb::bson::datetime::DateTime::from(chrono::Utc::now())
                 }},
                 None,
             )
