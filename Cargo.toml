@@ -27,7 +27,7 @@ mongodb = { version = "2.2", features = [
     "bson-chrono-0_4",
     "bson-serde_with",
 ] }
-validator = { version = "0.14" }
+validator = { version = "0.15" }
 uuid = { version = "0.8", features = ["serde", "v4"] }
 argon2 = "0.4"
 
