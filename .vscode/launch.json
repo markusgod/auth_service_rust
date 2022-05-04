@@ -22,7 +22,9 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "env": {
-                "RUST_LOG": "trace"
+                "RUST_LOG": "trace",
+                "AUTH_SERVICE_MONGO_URI": "mongodb://root:root@localhost:27017/",
+                "AUTH_SERVICE_MONGO_DB_NAME": "TestDb"
             }
         },
         {

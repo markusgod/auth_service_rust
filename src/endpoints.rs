@@ -114,7 +114,7 @@ pub async fn register_user(
 
 #[derive(Debug, Deserialize)]
 pub struct AccsessTokenRequest {
-    session_uuid: uuid::Uuid,
+    session_uuid: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -127,9 +127,20 @@ pub async fn get_accsess_token(
     Extension(mongo_users_collection): Extension<Collection<User>>,
 ) -> std::result::Result<Json<AccsessTokenResponse>, EndpointError> {
     if let Some(user) = mongo_users_collection
-        .find_one(doc! { "sessions.session_uuid": request.session_uuid}, None)
+        .find_one(doc! { "sessions.opaque_token": &request.session_uuid}, None)
         .await?
     {
+        tracing::trace!("{:?}", user);
+        let update_res = mongo_users_collection
+            .update_one(
+                doc! {"sessions.opaque_token": &request.session_uuid},
+                doc! {"$set" : doc! {
+                    "sessions.$.last_used": chrono::Utc::now()
+                }},
+                None,
+            )
+            .await?;
+        tracing::trace!("{:?}", update_res);
         let accsess_token = crate::auth::generate_acsess_token(&user)?;
         Ok(Json(AccsessTokenResponse { accsess_token }))
     } else {

@@ -12,7 +12,6 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
     let settings = config::Config::builder()
-        .add_source(config::File::with_name("auth_service_config"))
         .add_source(config::Environment::with_prefix("AUTH_SERVICE"))
         .build()?;
     let mongo_db = mongodb(&settings).await?;
@@ -35,8 +34,9 @@ async fn mongodb(settings: &config::Config) -> anyhow::Result<mongodb::Database>
     let mongo_app_name = settings
         .get_string("MONGO_APP_NAME")
         .unwrap_or_else(|_| String::from("AUTH_SERVICE_RUST"));
-    let mongo_uri = settings.get_string("MONGO_URI")?;
-    let db_name = settings.get_string("MONGO_DB_NAME")?;
+    tracing::warn!("{:?}", settings);
+    let mongo_uri = settings.get_string("mongo_uri")?;
+    let db_name = settings.get_string("mongo_db_name")?;
 
     let mut mongo_client_options = ClientOptions::parse(mongo_uri).await?;
     mongo_client_options.app_name = Some(mongo_app_name);
@@ -59,4 +59,4 @@ impl AuthRouterExt for axum::Router {
     }
 }
 
- */
+*/
