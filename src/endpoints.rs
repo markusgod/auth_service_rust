@@ -90,6 +90,7 @@ pub async fn register_user(
     if !user.validate() {
         return Err(EndpointError::InvalidEmail(user.email));
     }
+    // #TODO: This whole thing should be in transaction
     if let Some(_user) = mongo_users_collection
         .find_one(doc! { "email":  &user.email}, None)
         .await?
@@ -202,7 +203,7 @@ pub async fn get_accsess_token(
             )
             .await?;
         tracing::trace!("{:?}", update_res);
-        let accsess_token = crate::auth::generate_acsess_token(&user)?;
+        let accsess_token = crate::auth::generate_acsess_token_es384(&user)?;
         Ok(Json(AccsessTokenResponse { accsess_token }))
     } else {
         Err(EndpointError::Unauthorized)

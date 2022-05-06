@@ -10,7 +10,7 @@ struct Claims {
     iat: usize,
 }
 
-pub fn generate_acsess_token(user: &models::User) -> anyhow::Result<String> {
+pub fn generate_acsess_token_es384(user: &models::User) -> anyhow::Result<String> {
     // Capture current time
     let now = chrono::Utc::now();
     // Set exparation time, #TODO: Fix hardocoded 15min
