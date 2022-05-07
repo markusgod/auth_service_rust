@@ -19,11 +19,12 @@ pub struct RegisterRequest {
 
 impl From<RegisterRequest> for User {
     fn from(request: RegisterRequest) -> Self {
-        use argon2::password_hash::PasswordHasher;
-        let argon2 = argon2::Argon2::default();
-        let password = argon2
-            .hash_password(request.password.as_bytes(), "testSalt")
-            .unwrap();
+        // use argon2::password_hash::PasswordHasher;
+        // let argon2 = argon2::Argon2::default();
+        // let password = argon2
+        //     .hash_password(request.password.as_bytes(), "testSalt")
+        //     .unwrap();
+        let password = bcrypt::hash(request.password.as_bytes(), 14).unwrap();
         Self {
             uuid: uuid::Uuid::new_v4(),
             full_name: request.full_name,
@@ -136,13 +137,14 @@ pub async fn login(
         .find_one(doc! { "email":  &request.email}, None)
         .await?
     {
-        use argon2::PasswordVerifier;
-        let password_hash =
-            argon2::password_hash::PasswordHash::new(&user.password).map_err(anyhow::Error::msg)?;
-        if argon2::Argon2::default()
-            .verify_password(request.password.as_bytes(), &password_hash)
-            .is_err()
-        {
+        //use argon2::PasswordVerifier;
+        //let password_hash =
+        //    argon2::password_hash::PasswordHash::new(&user.password).map_err(anyhow::Error::msg)?;
+        //if argon2::Argon2::default()
+        //    .verify_password(request.password.as_bytes(), &password_hash)
+        //    .is_err()
+        let password_hash = bcrypt::hash(request.password.as_bytes(), 14).unwrap();
+        if bcrypt::verify(request.password.as_bytes(), &password_hash).unwrap() {
             return Err(EndpointError::Unauthorized);
         }
         use rand::distributions::Alphanumeric;
